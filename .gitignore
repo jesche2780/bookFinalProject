@@ -1,0 +1,39 @@
+# Eclipse project files
+*.classpath
+*.project
+*.settings/
+
+# Maven build output
+/target/
+
+# Logs
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Lombok generated files
+lombok.config
+
+# IDE metadata
+.idea/
+*.iml
+
+# Environment files
+.env
+*.env
+
+# Java backup files
+*.bak
+*.swp
+
+# IntelliJ cache
+out/
+
+# Test reports
+/test-output/
+
+# Temporary files
+*.tmp
+*.temp
