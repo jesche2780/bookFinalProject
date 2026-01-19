@@ -22,17 +22,21 @@ import library.entity.Book;
 import library.entity.Borrower;
 import library.entity.Genre;
 
+// Service layer handling business logic for managing books
 @Service
 public class BookService {
 
+	// Provides low-level access to persistence operations
 	@PersistenceContext
 	private EntityManager entityManager;
 
+	// Repositories for interacting with related entities
 	private final BookDao bookDao;
 	private final AuthorDao authorDao;
 	private final BorrowerDao borrowerDao;
 	private final GenreDao genreDao;
 
+	// Constructor-based dependency injection
 	public BookService(BookDao bookDao, AuthorDao authorDao, BorrowerDao borrowerDao, GenreDao genreDao) {
 		this.bookDao = bookDao;
 		this.authorDao = authorDao;
@@ -40,7 +44,7 @@ public class BookService {
 		this.genreDao = genreDao;
 	}
 
-	// CREATE
+	// Creates a new book from the request data
 	@Transactional
 	public BookData create(Map<String, Object> request) {
 		Book book = new Book();
@@ -49,7 +53,7 @@ public class BookService {
 		return toData(saved);
 	}
 
-	// UPDATE
+	// Updates an existing book by ID
 	@Transactional
 	public BookData update(Long id, Map<String, Object> request) {
 		Book book = bookDao.findById(id).orElseThrow(() -> new NoSuchElementException("Book not found: " + id));
@@ -61,26 +65,27 @@ public class BookService {
 		return toData(saved);
 	}
 
-	// GET ALL
+	// Returns all books as DTOs
 	@Transactional(readOnly = true)
 	public Set<BookData> findAll() {
 		return bookDao.findAll().stream().map(this::toData).collect(Collectors.toSet());
 	}
 
-	// GET BY ID
+	// Returns a single book by ID
 	@Transactional(readOnly = true)
 	public BookData findById(Long id) {
 		Book book = bookDao.findById(id).orElseThrow(() -> new NoSuchElementException("Book not found: " + id));
 		return toData(book);
 	}
 
-	// DELETE
+	// Deletes a book by ID and returns its title
 	@Transactional
 	public String delete(Long id) {
 		Book book = bookDao.findById(id).orElseThrow(() -> new NoSuchElementException("Book not found: " + id));
 
 		String title = book.getTitle();
 
+		// Remove relationships before deletion
 		book.setGenres(Collections.emptySet());
 		book.setAuthor(null);
 		book.setBorrower(null);
@@ -91,11 +96,12 @@ public class BookService {
 		return title;
 	}
 
-	// APPLY REQUEST TO BOOK
+	// Applies incoming request fields to a Book entity, creating related entities
+	// as needed
 	@SuppressWarnings("unchecked")
 	private void applyRequestToBook(Book book, Map<String, Object> request) {
 
-		// Prevent Hibernate from flushing Book before related entities are saved
+		// Prevent premature flush while updating relationships
 		entityManager.detach(book);
 
 		// TITLE
@@ -124,6 +130,7 @@ public class BookService {
 			}
 		}
 
+		// BORROWER
 		if (request.containsKey("borrower")) {
 			Object borrowerObj = request.get("borrower");
 
@@ -179,7 +186,7 @@ public class BookService {
 		}
 	}
 
-	// CLEANUP ORPHANS
+	// Removes authors, borrowers, and genres that no longer reference any books
 	private void cleanupOrphans() {
 
 		authorDao.findAll().forEach(a -> {
@@ -201,14 +208,14 @@ public class BookService {
 		});
 	}
 
-	// ENTITY → DTO
+	// Converts a Book entity into a BookData DTO
 	private BookData toData(Book book) {
 		if (book == null)
 			return null;
 
 		Set<Genre> genresSnapshot;
 		try {
-			genresSnapshot = book.getGenres() == null ? Collections.emptySet() : new HashSet<>(book.getGenres());
+			genresSnapshot = (book.getGenres() == null) ? Collections.emptySet() : new HashSet<>(book.getGenres());
 		} catch (Exception e) {
 			genresSnapshot = Collections.emptySet();
 		}
